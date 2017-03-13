@@ -1,2 +1,2 @@
 # flushdns
-Based on load.cn to download hosts file, then flush DNS cache locally.
+Based on https://github.com/racaljk/hosts to download hosts file, then flush DNS cache locally.
