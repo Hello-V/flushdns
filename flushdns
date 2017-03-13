@@ -2,70 +2,94 @@
 # -*- coding: utf-8 -*-
 import re
 import urllib2
-import zipfile
+# import zipfile
 import shutil
 import os
 
 
 class flusher:
     def __init__(self):
-        self._pass_url = "https://laod.cn/hosts/2017-google-hosts.html"
-        self._download_url = "https://iiio.io/download/"
-        self.save_to = '/tmp/'
+        # self._pass_url = "https://laod.cn/hosts/2017-google-hosts.html"
+        # self._download_url = "https://iiio.io/download/"
+        self.save_to = '/tmp/hosts'
+        self._hosts_url = "https://coding.net/u/scaffrey/p/hosts/git/raw/master/hosts"
 
-    def get_filename(self):
-        request = urllib2.Request(self._download_url)
-        response = urllib2.urlopen(request)
-        data = response.read()
-        host_filename = re.findall('<a href="([0-9]{8})/"', data)[-1]
-        return str(host_filename)
+    # def get_filename(self):
+    #     request = urllib2.Request(self._download_url)
+    #     response = urllib2.urlopen(request)
+    #     data = response.read()
+    #     host_filename = re.findall('<a href="([0-9]{8})/"', data)[-1]
+    #     return str(host_filename)
 
-    def download_file(self):
-        file_name = self.get_filename()
-        server_url = self._download_url+self.get_filename()+'/'
-        dnszip = open(self.save_to+file_name+'.zip', 'w')
-        server_request = urllib2.Request(server_url)
-        server_response = urllib2.urlopen(server_request)
-        server_data = server_response.read()
-        file_url = re.findall('<a href="(.*?)">Windows系列跟苹果系列.zip</a>', server_data)[0]
-        download_req = urllib2.Request(server_url+file_url)
+    def download_hosts(self):
+        # file_name = self.get_filename()
+        # server_url = self._download_url+self.get_filename()+'/'
+        # dnszip = open(self.save_to+file_name+'.zip', 'w')
+        # server_request = urllib2.Request(server_url)
+        # server_response = urllib2.urlopen(server_request)
+        # server_data = server_response.read()
+        # file_url = re.findall('<a href="(.*?)">Windows系列跟苹果系列.zip</a>', server_data)[0]
+        # download_req = urllib2.Request(server_url+file_url)
+        # download_res = urllib2.urlopen(download_req)
+        # dnszip.write(download_res.read())
+        # dnszip.close()
+        # return self.save_to+file_name+'.zip'
+        download_req = urllib2.Request(self._hosts_url)
         download_res = urllib2.urlopen(download_req)
-        dnszip.write(download_res.read())
-        dnszip.close()
-        return self.save_to+file_name+'.zip'
+        if download_res.getcode() == 404:
+            print "Hosts file got 404 Error."
+            return False
+        elif download_res.getcode() == 200:
+            hosts_data = download_res.read()
+            title = re.findall('(.*?)\\n(.*?)\\n(.*?)\\n\\n(.*?)\\n(.*?)\\n\\n# Localhost ', hosts_data)[0]
+            try:
+                for i in range(len(title)):
+                    print title[i]
+            except AttributeError as Ae:
+                print str(Ae)
+            except IndexError as Ie:
+                print str(Ie)
+            try:
+                hosts_temp = open(self.save_to, 'w')
+                hosts_temp.write(hosts_data)
+                hosts_temp.close()
+                return self.save_to
+            except IOError as e:
+                print str(e)
+                return False
+        else:
+            print "There is an error code: " + str(download_res.getcode())
 
-    def get_zipass(self):
-        request = urllib2.Request(self._pass_url)
-        response = urllib2.urlopen(request)
-        data = response.read()
-        title = re.findall('<title>2017 Google hosts 持续更新(.*?) ', data)[0]
-        print "*"*8+title+"*"*8
-        zipass = re.findall('</a>解码密码：(.*?)</p>', data)[0]
-        return str(zipass)
+    # def get_zipass(self):
+    #     request = urllib2.Request(self._pass_url)
+    #     response = urllib2.urlopen(request)
+    #     data = response.read()
+    #     title = re.findall('<title>2017 Google hosts 持续更新(.*?) ', data)[0]
+    #     print "*"*8+title+"*"*8
+    #     zipass = re.findall('</a>解码密码：(.*?)</p>', data)[0]
+    #     return str(zipass)
 
 
 def main():
     dnsflusher = flusher()
-    password = dnsflusher.get_zipass()
-    location = dnsflusher.download_file()
-    print "--> Password:" + password
-    print "--> Saved to: " + location
-    zfile = zipfile.ZipFile(location, 'r')
-    zfile.extractall(path='/tmp', pwd=password)
-    print ">>> Unzip success."
+    # password = dnsflusher.get_zipass()
+    # location = dnsflusher.download_file()
+    location = dnsflusher.download_hosts()
+    # print "--> Password:" + password
+    print "> Saved to: " + location
+    # zfile = zipfile.ZipFile(location, 'r')
+    # zfile.extractall(path='/tmp', pwd=password)
+    # print ">>> Unzip success."
     try:
         shutil.copy('/tmp/hosts', '/etc/hosts')
-        print ">>> Cover success."
+        print "> Cover success."
     except IOError as e:
         print str(e)
     try:
         os.system('sudo killall -HUP mDNSResponder')
-        print ">>> Flush dnscache success."
-        os.remove(location)
-        os.remove('/tmp/hosts')
+        print "> Flush dnscache success."
     except Exception as e:
         print str(e)
-
 
 if __name__ == '__main__':
     main()
